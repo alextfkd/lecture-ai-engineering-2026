@@ -11,9 +11,10 @@
 """
 
 import argparse
+import os
 
 from google import genai
-from google.genai import errors
+from google.genai import errors, types
 
 from app.config import MODEL, api_error_message, get_api_key
 
@@ -23,7 +24,13 @@ DEFAULT_QUESTION = "AIE2026の講座の宿題にある「3レベル」とは何�
 
 def ask(question: str) -> str:
     client = genai.Client(api_key=get_api_key())
-    response = client.models.generate_content(model=MODEL, contents=question)
+    raw_temperature = os.getenv("AIE_TEMPERATURE", "").strip()
+    config = (
+        types.GenerateContentConfig(temperature=float(raw_temperature))
+        if raw_temperature
+        else None
+    )
+    response = client.models.generate_content(model=MODEL, contents=question, config=config)
 
     # TODO(第1回 演習): response.usage_metadata から
     #   入力トークン数と出力トークン数を表示してみよう（Copilotに頼んでよい）
@@ -37,6 +44,9 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f"[model] {MODEL}")
+    temperature = os.getenv("AIE_TEMPERATURE", "").strip()
+    if temperature:
+        print(f"[temperature] {temperature}")
     print(f"[質問] {args.question}\n")
     try:
         print(ask(args.question))
