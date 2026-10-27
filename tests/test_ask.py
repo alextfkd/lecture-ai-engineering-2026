@@ -3,7 +3,9 @@
 import pytest
 
 from app.ask import (
+    CompactFailed,
     TokenLimitExceeded,
+    ask_with_client,
     ensure_within_token_limit,
     load_session,
     new_session,
@@ -13,6 +15,7 @@ from app.ask import (
     resolve_mode,
     resolve_question,
     save_session,
+    summary_prompt,
 )
 
 
@@ -106,3 +109,114 @@ def test_session_json_roundtrip_assigns_the_next_number(tmp_path):
 def test_load_session_missing_file(tmp_path):
     with pytest.raises(SystemExit):
         load_session(3, tmp_path)
+
+
+def test_summary_prompt_includes_token_count_limit_and_transcript():
+    turns = [
+        {"role": "user", "text": "合言葉はみかん"},
+        {"role": "model", "text": "覚えた"},
+    ]
+    prompt = summary_prompt(turns, 1819, 1000)
+    assert "1819" in prompt
+    assert "1000" in prompt
+    assert "利用者: 合言葉はみかん" in prompt
+    assert "モデル: 覚えた" in prompt
+
+
+class _Usage:
+    def __init__(self, prompt: int, output: int) -> None:
+        self.prompt_token_count = prompt
+        self.candidates_token_count = output
+        self.total_token_count = prompt + output
+        self.thoughts_token_count = 0
+
+
+class _Response:
+    def __init__(self, text: str, prompt: int, output: int) -> None:
+        self.text = text
+        self.usage_metadata = _Usage(prompt, output)
+
+
+class _ScriptedModels:
+    def __init__(self, counts: list[int], responses: list[_Response]) -> None:
+        self.counts = list(counts)
+        self.responses = list(responses)
+        self.generate_contents: list[object] = []
+
+    def count_tokens(self, *, model: str, contents: object) -> _Count:
+        return _Count(self.counts.pop(0))
+
+    def generate_content(self, *, model: str, contents: object, config: object) -> _Response:
+        self.generate_contents.append(contents)
+        return self.responses.pop(0)
+
+
+class _ScriptedClient:
+    def __init__(self, counts: list[int], responses: list[_Response]) -> None:
+        self.models = _ScriptedModels(counts, responses)
+
+
+def test_conversation_over_the_limit_is_summarized_then_answered():
+    prior = [
+        {"role": "user", "text": "合言葉はみかん", "tokens": 10},
+        {"role": "model", "text": "覚えた", "tokens": 5, "prompt_tokens": 10},
+    ]
+    client = _ScriptedClient(
+        counts=[1819, 200, 8],
+        responses=[
+            _Response("合言葉はみかんだった。", 1800, 12),
+            _Response("みかん", 200, 2),
+        ],
+    )
+    result = ask_with_client(
+        client,
+        "合言葉は何？",
+        token_limit=1000,
+        prior_turns=prior,
+        config=None,
+    )
+    assert result.text == "みかん"
+    assert result.compacted_from == 1819
+    assert result.summary == "合言葉はみかんだった。"
+    assert result.user_tokens == 8
+    assert prior[0]["text"] == "合言葉はみかん"
+    assert result.history is not None
+    assert result.history[1]["text"] == "合言葉はみかんだった。"
+    assert result.history[1]["source_prompt_tokens"] == 1819
+    assert result.history[1]["compacted"] is True
+    summary_request = client.models.generate_contents[0]
+    assert isinstance(summary_request, str)
+    assert "1819" in summary_request
+    assert "1000" in summary_request
+    answer_request = client.models.generate_contents[1]
+    assert answer_request[-1].parts[0].text == "合言葉は何？"
+    assert "合言葉はみかんだった。" in answer_request[1].parts[0].text
+
+
+def test_one_shot_over_the_limit_does_not_summarize():
+    client = _ScriptedClient(counts=[50], responses=[])
+    with pytest.raises(TokenLimitExceeded) as exc:
+        ask_with_client(client, "hello", token_limit=20, prior_turns=None, config=None)
+    assert exc.value.after_compact is False
+    assert client.models.generate_contents == []
+
+
+def test_summary_that_is_still_over_the_limit_does_not_answer():
+    prior = [{"role": "user", "text": "長い", "tokens": 1}, {"role": "model", "text": "履歴", "tokens": 1}]
+    client = _ScriptedClient(
+        counts=[101, 150],
+        responses=[_Response("まだ長い要約", 90, 40)],
+    )
+    with pytest.raises(TokenLimitExceeded) as exc:
+        ask_with_client(client, "続き", token_limit=100, prior_turns=prior, config=None)
+    assert exc.value.after_compact is True
+    assert exc.value.prompt_tokens == 150
+    assert len(client.models.generate_contents) == 1
+
+
+def test_empty_summary_does_not_continue():
+    prior = [{"role": "user", "text": "長い", "tokens": 1}, {"role": "model", "text": "履歴", "tokens": 1}]
+    client = _ScriptedClient(counts=[100], responses=[_Response("  ", 90, 0)])
+    with pytest.raises(CompactFailed):
+        ask_with_client(client, "続き", token_limit=50, prior_turns=prior, config=None)
+    assert len(client.models.generate_contents) == 1
