@@ -22,7 +22,9 @@ from app.config import MODEL, api_error_message, get_api_key
 DEFAULT_QUESTION = "AIE2026の講座の宿題にある「3レベル」とは何ですか？"
 
 
-def ask(question: str) -> str:
+def ask(
+    question: str,
+) -> tuple[str | None, types.GenerateContentResponseUsageMetadata | None]:
     client = genai.Client(api_key=get_api_key())
     raw_temperature = os.getenv("AIE_TEMPERATURE", "").strip()
     config = (
@@ -31,11 +33,7 @@ def ask(question: str) -> str:
         else None
     )
     response = client.models.generate_content(model=MODEL, contents=question, config=config)
-
-    # TODO(第1回 演習): response.usage_metadata から
-    #   入力トークン数と出力トークン数を表示してみよう（Copilotに頼んでよい）
-
-    return response.text
+    return response.text, response.usage_metadata
 
 
 def main() -> None:
@@ -49,10 +47,22 @@ def main() -> None:
         print(f"[temperature] {temperature}")
     print(f"[質問] {args.question}\n")
     try:
-        print(ask(args.question))
+        answer, usage = ask(args.question)
     except errors.APIError as e:
         print(api_error_message(e.code, e.message))
         raise SystemExit(1)
+
+    if usage is not None:
+        prompt = usage.prompt_token_count or 0
+        output = usage.candidates_token_count or 0
+        total = usage.total_token_count or 0
+        thoughts = usage.thoughts_token_count or 0
+        line = f"[tokens] 入力 {prompt} / 出力 {output}"
+        if thoughts:
+            line += f" / 思考 {thoughts}"
+        line += f" / 合計 {total}"
+        print(f"{line}\n")
+    print(answer)
 
 
 if __name__ == "__main__":
