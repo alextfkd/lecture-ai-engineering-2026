@@ -15,7 +15,14 @@ AIエンジニアリング実践講座（AIE2026）の演習と宿題で使う�
 | Gemini API（Google AI Studio の無料枠） | LLM の呼び出し。**個人**の Google アカウントでキーを発行し、Codespaces secret `GEMINI_API_KEY` で渡します | 無料枠には 1 分あたり・1 日あたりの上限があります（下の「前提と制約」） |
 | Google Colab（T4 GPU、無料枠） | 第2回の LoRA 学習だけに使います | GPU の利用時間に上限があります。終わったらランタイムを削除してください |
 
-自分の PC で動かす場合は、Python 3.12 と [uv](https://docs.astral.sh/uv/) を入れて `uv sync --frozen` を実行し、環境変数 `GEMINI_API_KEY` を設定してください。
+自分の PC で進める場合は、Python 3.12 と [uv](https://docs.astral.sh/uv/) を入れて `uv sync --frozen` を実行します。API キーはリポジトリ直下の `.env` に書きます。
+
+```bash
+cp .env.example .env
+# .env の GEMINI_API_KEY= に、AI Studio で発行したキーを書く
+```
+
+`.env` は gitignore 済みです。コミットされません。Codespaces では、今まで通り secret が環境変数 `GEMINI_API_KEY` として入ります。同じ名前が両方にあるときは、**環境変数が使われます**（`.env` は未設定の名前だけ補います）。
 
 ## はじめに（第1回）
 
@@ -36,6 +43,7 @@ uv run python -m app.ask "LoRAとは何ですか？"
 
 ```
 .devcontainer/   Codespaces の環境定義（Python 3.12、uv、Node.js。起動時に uv sync --frozen）
+.env.example    ローカル用の見本。.env は gitignore。Codespaces では secret が優先
 .github/workflows/test.yml  PR ごとにテストを実行（fork では Actions タブで有効化が必要）
 app/
   config.py      モデル名とAPIキーの読み込み
@@ -69,13 +77,13 @@ pyproject.toml / uv.lock  依存パッケージとその固定版
 - **依存パッケージの版は固定**しています（`uv.lock`。Python 3.12、pydantic-ai-slim 2.57.0、google-genai 2.31.0）。講座の期間中は上げません。`uv sync --frozen` でそのまま入れてください。
 - **既定のモデルは `gemini-3.5-flash-lite`** です。環境変数 `AIE_MODEL` で切り替えられます（下の「モデルの切り替え」）。ほかのモデルや自前契約の API を使ってもかまいません
 - **Gemini API の無料枠にはレート制限**があります。エージェント（第3回以降）は 1 つの質問で LLM を複数回呼ぶので、第1回より早く上限に達します。`レート制限に達しました` と出たら 1 分ほど待ってください。`モデルが混み合っています（503）` が続くときは `AIE_MODEL=gemini-3.1-flash-lite` を試してください
-- **API キーは環境変数 `GEMINI_API_KEY` だけ**で渡します。コード・コミット・チャットに貼らないでください。漏れたら AI Studio で削除して作り直します
+- **API キーは環境変数 `GEMINI_API_KEY` だけ**で渡します。Codespaces では secret、ローカルでは `.env` が、未設定のときだけこの環境変数を補います。コード・コミット・チャットに貼らないでください。漏れたら AI Studio で削除して作り直します
 - Codespaces からインターネットへは出られますが、外から Codespaces の中へは接続できません（ポート転送は既定で非公開）。第5回の MCP サーバーは Codespaces の中で動かします
 - テスト（`uv run pytest -q`）は API キーなしで動きます（LLM を呼ばない TestModel を使用）
 
 ## 守ってほしいこと
 
-- **APIキーをコードやコミットに書かない。** Codespaces secret で渡します
+- **APIキーをコードやコミットに書かない。** Codespaces では secret、ローカルでは gitignore 済みの `.env` で渡します
 - **使い終わったら Codespaces を停止する。** 無料枠を使い切ると起動できなくなります
 - AIツール（Copilot など）は使ってかまいません。提案されたコードは、読んで理解してから採用してください
 

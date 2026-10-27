@@ -3,9 +3,10 @@ __pycache__/
 .pytest_cache/
 *.pyc
 
-# 秘密情報はコミットしない（APIキーは Codespaces secret で渡す）
+# 秘密情報はコミットしない（Codespaces は secret、ローカルは .env）
 .env
 .env.*
+!.env.example
 
 # 個人の学習ログ（第3回の宿題で作成）は共有しない
 learning_log/
