@@ -11,6 +11,9 @@ __pycache__/
 # 個人の学習ログ（第3回の宿題で作成）は共有しない
 learning_log/
 
+# 会話セッション（app.ask --new / --session）はローカルにだけ置く
+sessions/
+
 # macOS
 .DS_Store
 lectures/01/ans_gemini-*.txt
