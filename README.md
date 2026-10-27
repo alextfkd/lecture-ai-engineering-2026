@@ -47,7 +47,7 @@ uv run python -m app.ask "LoRAとは何ですか？"
 .github/workflows/test.yml  PR ごとにテストを実行（fork では Actions タブで有効化が必要）
 app/
   config.py      モデル名とAPIキーの読み込み
-  ask.py         第1回：LLMに質問する
+  ask.py         第1回：LLMへの質問。会話は sessions/N.json、上限超過時は要約して続ける
   tools.py       第3回：エージェントのツール（用語集の検索など）
   agent.py       第3回：Pydantic AI の学習支援エージェント（第5回：--mcp で MCP 経由）
   mcp_server.py  第5回：用語集を公開する MCP サーバー
@@ -60,6 +60,7 @@ lectures/NN/
   answer.md      あなたが記入して提出するファイル
 notebooks/       第2回：Google Colab で動かす LoRA のノートブック（lora_format_tuning.ipynb）
 scripts/         補助スクリプト
+sessions/        第1回の会話セッション（gitignore。--new / --session で作る）
 tests/           テスト（APIキー不要）
 pyproject.toml / uv.lock  依存パッケージとその固定版
 ```
@@ -96,3 +97,34 @@ AIE_MODEL=gemini-3.5-flash uv run python -m app.ask "LoRAとは何ですか？"
 ```
 
 無料枠には1分あたり・1日あたりのリクエスト上限があります。上限は [Gemini API のレート制限のページ](https://ai.google.dev/gemini-api/docs/rate-limits) で確認してください。
+
+## 第1回の課題への取り組み
+
+演習では応答のトークン数を表示し、宿題では会話をセッションとして残した。入力が上限を超えた会話は、履歴を要約してから続ける。記録は [lectures/01/answer.md](lectures/01/answer.md)。
+
+### 1回だけ聞いて、トークン数を見る
+
+履歴は残さない。応答の前に、入力・出力・合計のトークン数が出る。
+
+```bash
+uv run python -m app.ask "LoRAとは何ですか？"
+```
+
+### 会話をセッションごとに残して続ける
+
+`--new` で新しいセッションを始め、`--session` でその番号の続きを足す。発言は `sessions/N.json` に `role`・`text`・`tokens` で保存する。このディレクトリは gitignore 済み。
+
+```bash
+uv run python -m app.ask --new "LoRAとは何ですか？"
+uv run python -m app.ask --session 1 "それの欠点は？"
+```
+
+### 入力上限を超えたら要約して続ける
+
+`AIE_TOKEN_LIMIT` が入力トークンの上限になる。1回きりの質問が超えたときは、モデルを呼ばずに止まる。会話が超えたときは、いまの入力トークン数と要約用のプロンプトを履歴といっしょに先に送り、返ってきた要約をセッションの先頭に置き直してから、その質問に答える。
+
+```bash
+AIE_TOKEN_LIMIT=1000 uv run python -m app.ask --session 1 "QLoRAとの違いは？"
+```
+
+セッション1では入力 1819 が上限 1000 を超え、要約のあと入力 210 で続きに答えられた。要約で短くなった分、本筋から外れた発言は残りにくい。
