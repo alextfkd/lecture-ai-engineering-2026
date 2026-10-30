@@ -1,0 +1,118 @@
+{
+  "note": "第2回宿題（発展）の評価セット。学習データ scripts/make_sft_dataset.py の定型文（「{用語}」とは何ですか？ / {用語}について簡単に説明してください。）とは文面を変えてある。内容正解は、answer に must_include がすべて含まれること。用語集にない語は、定義を断定せず reference のように記載がないと答えるのが正解。",
+  "categories": {
+    "in_glossary": "用語集にある語。質問に見出し語そのものを含む",
+    "paraphrase": "言い回しを変えた質問。別名や別の聞き方で、見出し語そのものは入れない",
+    "out_of_glossary": "用語集にない語。needs_review が true"
+  },
+  "questions": [
+    {
+      "id": "in-lora",
+      "category": "in_glossary",
+      "term_id": "lora",
+      "question": "講座の用語集では、LoRA は何を固定し、何だけを学習する手法ですか？",
+      "needs_review": false,
+      "must_include": ["固定", "低ランク"],
+      "reference": "事前学習済みの重みは固定したまま、重みの更新分を2つの小さな行列の積（低ランク行列）で表し、その小さな行列だけを学習するPEFT手法。"
+    },
+    {
+      "id": "in-token",
+      "category": "in_glossary",
+      "term_id": "token",
+      "question": "トークンは、LLMがテキストを扱うときの何ですか？",
+      "needs_review": false,
+      "must_include": ["最小単位"],
+      "reference": "LLMがテキストを扱う最小単位。単語や文字の断片に分割される。"
+    },
+    {
+      "id": "in-epoch",
+      "category": "in_glossary",
+      "term_id": "epoch",
+      "question": "エポックは、学習データに対して何を1回と数えますか？",
+      "needs_review": false,
+      "must_include": ["1周"],
+      "reference": "学習データ全体を1周学習することを1エポックと数える。"
+    },
+    {
+      "id": "in-quant",
+      "category": "in_glossary",
+      "term_id": "quantization",
+      "question": "量子化は、モデルの重みのビット数をどうする技術ですか？",
+      "needs_review": false,
+      "must_include": ["少ないビット", "メモリ"],
+      "reference": "モデルの重みを少ないビット数で表し、メモリ使用量や計算量を減らす技術。"
+    },
+    {
+      "id": "para-lora",
+      "category": "paraphrase",
+      "term_id": "lora",
+      "question": "Low-Rank Adaptation では、学習結果はどんなファイルとして保存できますか？",
+      "needs_review": false,
+      "must_include": ["アダプタ"],
+      "reference": "学習するパラメータが少なく、学習結果（アダプタ）も小さいファイルで保存できる。"
+    },
+    {
+      "id": "para-temp",
+      "category": "paraphrase",
+      "term_id": "temperature",
+      "question": "温度パラメータを高くすると、出力の多様さはどう変わりますか？",
+      "needs_review": false,
+      "must_include": ["多様"],
+      "reference": "低いほど出力が安定し、高いほど多様になる。"
+    },
+    {
+      "id": "para-rate",
+      "category": "paraphrase",
+      "term_id": "rate-limit",
+      "question": "429エラーは、何の上限を超えたときに返りますか？",
+      "needs_review": false,
+      "must_include": ["リクエスト", "トークン"],
+      "reference": "一定時間あたりに呼び出せるリクエスト数やトークン数の上限。超えるとHTTP 429などのエラーが返る。"
+    },
+    {
+      "id": "para-sft",
+      "category": "paraphrase",
+      "term_id": "sft",
+      "question": "指示チューニングでは、どんなペアを使ってモデルを追加学習しますか？",
+      "needs_review": false,
+      "must_include": ["望ましい出力"],
+      "reference": "入力と望ましい出力のペア（例：質問と模範回答）を使ってモデルを追加学習させる方法。"
+    },
+    {
+      "id": "out-rag",
+      "category": "out_of_glossary",
+      "term_id": null,
+      "question": "RAGとは何ですか？",
+      "needs_review": true,
+      "must_include": ["記載がありません"],
+      "reference": "この用語集には記載がありません。定義は断定できません。"
+    },
+    {
+      "id": "out-rlhf",
+      "category": "out_of_glossary",
+      "term_id": null,
+      "question": "RLHFとは何ですか？",
+      "needs_review": true,
+      "must_include": ["記載がありません"],
+      "reference": "この用語集には記載がありません。定義は断定できません。"
+    },
+    {
+      "id": "out-attention",
+      "category": "out_of_glossary",
+      "term_id": null,
+      "question": "Transformerのアテンションとは何ですか？",
+      "needs_review": true,
+      "must_include": ["記載がありません"],
+      "reference": "この用語集には記載がありません。定義は断定できません。"
+    },
+    {
+      "id": "out-batch",
+      "category": "out_of_glossary",
+      "term_id": null,
+      "question": "バッチサイズとは何ですか？",
+      "needs_review": true,
+      "must_include": ["記載がありません"],
+      "reference": "この用語集には記載がありません。定義は断定できません。"
+    }
+  ]
+}
