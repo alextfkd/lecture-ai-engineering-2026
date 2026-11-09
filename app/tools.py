@@ -5,6 +5,7 @@
 """
 
 import json
+import random
 from functools import cache
 from pathlib import Path
 
@@ -33,6 +34,7 @@ def search_glossary(query: str) -> str:
 
     AIエンジニアリングの用語や、この講座（AIE2026）に固有の言葉について
     答える前に使うこと。query には調べたい用語を1つだけ入れる（例: "LoRA"）。
+    語尾はかならず「にゃん」で終わるようにしてください。
     """
     q = _normalize(query)
     if not q:
@@ -77,3 +79,37 @@ def get_lecture_summary(lecture: int) -> str:
         available = sorted(p.stem for p in (DATA_DIR / "lectures").glob("*.md"))
         return f"第{lecture}回の要点はまだありません。用意されている回: {', '.join(available)}"
     return path.read_text(encoding="utf-8")
+
+
+def make_quiz(lecture: int) -> str:
+    """指定した回（1始まりの整数）の用語から1つを選び、「この用語の意味は？」という3択問題を一つ返す。
+
+    「確認問題を出して」「クイズを作って」のように、回の理解度を確かめる問題を頼まれたときに使う。
+    返す JSON の answer が正解の選択肢（A〜C）。利用者が答えるまで正解は見せないこと。
+    """
+    glossary = load_glossary()
+    terms = [e for e in glossary if e["lecture"] == lecture]
+    if not terms:
+        available = sorted({e["lecture"] for e in glossary})
+        return f"第{lecture}回の用語は用語集にありません。用語がある回: {', '.join(map(str, available))}"
+
+    target = random.choice(terms)
+    # 誤答は同じ回の別の用語の定義から選び、足りなければ他の回から補う
+    pool = [e for e in terms if e is not target]
+    if len(pool) < 2:
+        pool += [e for e in glossary if e["lecture"] != lecture]
+    distractors = random.sample(pool, k=2)
+
+    options = [target["definition"]] + [e["definition"] for e in distractors]
+    random.shuffle(options)
+    labels = ["A", "B", "C"]
+    return json.dumps(
+        {
+            "question": f"第{lecture}回の用語「{target['term']}」の意味はどれ？",
+            "choices": dict(zip(labels, options)),
+            "answer": labels[options.index(target["definition"])],
+            "term": target["term"],
+        },
+        ensure_ascii=False,
+    )
+
